@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="お金管理">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>お金管理</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;color:#111827;background:#f3f4f6}
+    *{box-sizing:border-box} body{margin:0;background:#f3f4f6}
+    header{padding:calc(env(safe-area-inset-top) + 18px) 18px 16px;background:#111827;color:#fff}
+    h1{margin:0;font-size:24px}.sub{opacity:.72;font-size:12px;margin-top:4px}
+    main{max-width:760px;margin:auto;padding:14px 14px calc(28px + env(safe-area-inset-bottom))}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .card{background:#fff;border-radius:16px;padding:15px;box-shadow:0 2px 10px #0000000b;margin-bottom:12px}
+    .label{font-size:12px;color:#6b7280}.value{font-size:24px;font-weight:800;margin-top:5px}
+    .bar{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:10px}.bar>i{display:block;height:100%;background:#111827}
+    h2{font-size:17px;margin:0 0 12px} label{display:block;font-size:13px;font-weight:700;margin:10px 0 5px}
+    input,select,button{font:inherit;width:100%;border:1px solid #d1d5db;border-radius:11px;padding:11px;background:#fff}
+    button{border:0;background:#111827;color:#fff;font-weight:700;cursor:pointer}.danger{background:#b91c1c}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .item{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:8px}
+    .itemtop{display:flex;justify-content:space-between;gap:8px}.amt{font-weight:800}
+    .muted{font-size:12px;color:#6b7280}.overdue{color:#b91c1c;font-weight:700}.today{font-weight:700}.paid{text-decoration:line-through;opacity:.55}
+    .check{display:flex;align-items:center;gap:8px;font-weight:600}.check input{width:auto}
+    .empty{text-align:center;color:#9ca3af;padding:14px}
+    .save{font-size:12px;text-align:center;color:#6b7280;margin:8px}
+    @media(max-width:430px){.row3{grid-template-columns:1fr 1fr}.row3>*:last-child{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+<header><h1>💰 お金管理</h1><div class="sub">自分専用・端末内に保存</div></header>
+<main>
+  <div class="grid">
+    <div class="card"><div class="label">現在の貯金</div><div id="balance" class="value">¥0</div></div>
+    <div class="card"><div class="label">未払い合計</div><div id="unpaid" class="value">¥0</div></div>
+  </div>
+  <div class="card">
+    <div class="label">貯金目標</div><div id="goalText" class="value">¥0</div>
+    <div class="bar"><i id="progress"></i></div><div id="progressText" class="muted">0%</div>
+  </div>
+
+  <div class="card">
+    <h2>貯金を管理</h2>
+    <div class="row">
+      <div><label>金額</label><input id="saveAmount" type="number" min="0" inputmode="numeric" placeholder="10000"></div>
+      <div><label>内容</label><input id="saveMemo" placeholder="給料から貯金"></div>
+    </div>
+    <div class="row" style="margin-top:8px"><button onclick="addSaving(1)">＋ 貯金する</button><button onclick="addSaving(-1)">− 引き出す</button></div>
+    <div class="row">
+      <div><label>現在の貯金を設定</label><input id="setBalance" type="number" min="0" inputmode="numeric"></div>
+      <div><label>目標額を設定</label><input id="setGoal" type="number" min="0" inputmode="numeric"></div>
+    </div>
+    <button onclick="setMoney()" style="margin-top:8px">設定を保存</button>
+  </div>
+
+  <div class="card">
+    <h2>支払いを追加</h2>
+    <label>支払先</label><input id="payee" placeholder="家賃、スマホ、カードなど">
+    <div class="row">
+      <div><label>金額</label><input id="payAmount" type="number" min="0" inputmode="numeric" placeholder="50000"></div>
+      <div><label>支払期日</label><input id="dueDate" type="date"></div>
+    </div>
+    <button onclick="addPayment()" style="margin-top:10px">＋ 支払いを追加</button>
+  </div>
+
+  <div class="card">
+    <h2>支払い一覧</h2><div id="payments"></div>
+  </div>
+
+  <div class="card">
+    <h2>繰り返し支払い</h2>
+    <div class="row">
+      <div><label>支払先</label><input id="rulePayee" placeholder="家賃"></div>
+      <div><label>金額</label><input id="ruleAmount" type="number" min="0" inputmode="numeric" placeholder="80000"></div>
+    </div>
+    <div class="row">
+      <div><label>次回支払日</label><input id="ruleDate" type="date"></div>
+      <div><label>周期</label><select id="ruleFreq"><option value="once">1回のみ</option><option value="monthly">毎月</option><option value="2monthly">2ヶ月ごと</option><option value="quarterly">3ヶ月ごと</option><option value="yearly">毎年</option></select></div>
+    </div>
+    <button onclick="addRule()" style="margin-top:10px">＋ 繰り返しを登録</button>
+    <div id="rules"></div>
+  </div>
+
+  <div class="card">
+    <h2>貯金履歴</h2><div id="logs"></div>
+  </div>
+
+  <div class="save" id="status">データを読み込み中…</div>
+  <div class="card"><button class="danger" onclick="resetAll()">すべてのデータを消去</button></div>
+</main>
+
+<script>
+const DB='MoneyManagerDB', KEY='money_manager_v3';
+const blank={balance:0,goal:0,payments:[],rules:[],savingLogs:[]};
+let state=structuredClone(blank), db;
+
+const $=id=>document.getElementById(id);
+const yen=n=>'¥'+Number(n||0).toLocaleString('ja-JP');
+const today=()=>new Date().toISOString().slice(0,10);
+
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>rej(r.error)})}
+function load(){return new Promise((res,rej)=>{const r=db.transaction('state','readonly').objectStore('state').get(KEY);r.onsuccess=()=>{if(r.result)state={...blank,...r.result};res()};r.onerror=()=>rej(r.error)})}
+function save(){return new Promise((res,rej)=>{const tx=db.transaction('state','readwrite');tx.objectStore('state').put(state,KEY);tx.oncomplete=()=>{ $('status').textContent='✓ データを保存しました';res()};tx.onerror=()=>rej(tx.error)})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+function render(){
+ $('balance').textContent=yen(state.balance);
+ $('unpaid').textContent=yen(state.payments.filter(x=>!x.paid).reduce((a,x)=>a+Number(x.amount),0));
+ $('goalText').textContent=yen(state.goal);
+ const pct=state.goal?Math.min(100,state.balance/state.goal*100):0;
+ $('progress').style.width=pct+'%'; $('progressText').textContent=Math.round(pct)+'%達成';
+ $('payments').innerHTML=state.payments.length?state.payments.slice().sort((a,b)=>a.due.localeCompare(b.due)).map((x,i)=>{
+   const d=Math.ceil((new Date(x.due+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);
+   const status=x.paid?'支払済':d<0?'期限切れ':d===0?'今日':d<=3?'3日以内':'余裕あり';
+   const cls=x.paid?'paid':d<0?'overdue':d===0?'today':'';
+   return `<div class="item ${cls}"><div class="itemtop"><b>${esc(x.payee)}</b><span class="amt">${yen(x.amount)}</span></div><div class="muted">期日：${x.due}　${status}</div><label class="check"><input type="checkbox" ${x.paid?'checked':''} onchange="togglePaid('${x.id}')"> 受付・支払済</label><button class="danger" onclick="delPayment('${x.id}')" style="margin-top:7px;padding:8px">削除</button></div>`
+ }).join(''):'<div class="empty">支払いはありません</div>';
+ $('rules').innerHTML=state.rules.length?state.rules.map((x,i)=>`<div class="item"><div class="itemtop"><b>${esc(x.payee)}</b><span>${yen(x.amount)}</span></div><div class="muted">次回：${x.date}　${freqName(x.freq)}</div><button class="danger" onclick="delRule('${x.id}')" style="margin-top:7px;padding:8px">削除</button></div>`).join(''):'<div class="empty">登録なし</div>';
+ $('logs').innerHTML=state.savingLogs.length?state.savingLogs.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.type==='in'?'貯金':'引き出し'}</b><span>${x.type==='in'?'+':'−'}${yen(x.amount)}</span></div><div class="muted">${esc(x.memo)}　${x.date}</div></div>`).join(''):'<div class="empty">履歴なし</div>';
+}
+function freqName(f){return ({once:'1回のみ',monthly:'毎月',2monthly:'2ヶ月ごと',quarterly:'3ヶ月ごと',yearly:'毎年'})[f]}
+async function addSaving(dir){
+ const amount=Number($('saveAmount').value); if(!amount)return alert('金額を入力してね');
+ if(dir<0&&amount>state.balance)return alert('現在の貯金額を超えて引き出せません');
+ state.balance+=dir*amount;
+ state.savingLogs.push({id:crypto.randomUUID(),type:dir>0?'in':'out',amount,memo:$('saveMemo').value||'',date:today()});
+ $('saveAmount').value='';$('saveMemo').value='';render();await save();
+}
+async function setMoney(){
+ state.balance=Math.max(0,Number($('setBalance').value)||0);state.goal=Math.max(0,Number($('setGoal').value)||0);
+ render();await save();
+}
+async function addPayment(){
+ const payee=$('payee').value.trim(),amount=Number($('payAmount').value),due=$('dueDate').value;
+ if(!payee||!amount||!due)return alert('支払先・金額・期日を入力してね');
+ state.payments.push({id:crypto.randomUUID(),payee,amount,due,paid:false});
+ $('payee').value='';$('payAmount').value='';$('dueDate').value='';render();await save();
+}
+async function togglePaid(id){const x=state.payments.find(x=>x.id===id);if(x){x.paid=!x.paid;render();await save()}}
+async function delPayment(id){state.payments=state.payments.filter(x=>x.id!==id);render();await save()}
+async function addRule(){
+ const payee=$('rulePayee').value.trim(),amount=Number($('ruleAmount').value),date=$('ruleDate').value,freq=$('ruleFreq').value;
+ if(!payee||!amount||!date)return alert('支払先・金額・次回支払日を入力してね');
+ state.rules.push({id:crypto.randomUUID(),payee,amount,date,freq});
+ $('rulePayee').value='';$('ruleAmount').value='';$('ruleDate').value='';render();await save();
+}
+async function delRule(id){state.rules=state.rules.filter(x=>x.id!==id);render();await save()}
+async function resetAll(){if(confirm('すべてのデータを消去します。よろしいですか？')){state=structuredClone(blank);render();await save()}}
+async function init(){try{await openDB();await load();render();$('status').textContent='✓ 保存データを読み込みました'}catch(e){$('status').textContent='保存機能を利用できませんでした'}}init();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
