@@ -123,7 +123,7 @@ function render(){
  $('rules').innerHTML=state.rules.length?state.rules.map((x,i)=>`<div class="item"><div class="itemtop"><b>${esc(x.payee)}</b><span>${yen(x.amount)}</span></div><div class="muted">次回：${x.date}　${freqName(x.freq)}</div><button class="danger" onclick="delRule('${x.id}')" style="margin-top:7px;padding:8px">削除</button></div>`).join(''):'<div class="empty">登録なし</div>';
  $('logs').innerHTML=state.savingLogs.length?state.savingLogs.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.type==='in'?'貯金':'引き出し'}</b><span>${x.type==='in'?'+':'−'}${yen(x.amount)}</span></div><div class="muted">${esc(x.memo)}　${x.date}</div></div>`).join(''):'<div class="empty">履歴なし</div>';
 }
-function freqName(f){return ({once:'1回のみ',monthly:'毎月',2monthly:'2ヶ月ごと',quarterly:'3ヶ月ごと',yearly:'毎年'})[f]}
+function freqName(f){return ({once:'1回のみ',monthly:'毎月','2monthly':'2ヶ月ごと',quarterly:'3ヶ月ごと',yearly:'毎年'})[f]}
 async function addSaving(dir){
  const amount=Number($('saveAmount').value); if(!amount)return alert('金額を入力してね');
  if(dir<0&&amount>state.balance)return alert('現在の貯金額を超えて引き出せません');
