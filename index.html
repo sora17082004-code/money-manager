@@ -121,7 +121,7 @@ function render(){
    return `<div class="item ${cls}"><div class="itemtop"><b>${esc(x.payee)}</b><span class="amt">${yen(x.amount)}</span></div><div class="muted">期日：${x.due}　${status}</div><label class="check"><input type="checkbox" ${x.paid?'checked':''} onchange="togglePaid('${x.id}')"> 受付・支払済</label><button class="danger" onclick="delPayment('${x.id}')" style="margin-top:7px;padding:8px">削除</button></div>`
  }).join(''):'<div class="empty">支払いはありません</div>';
  $('rules').innerHTML=state.rules.length?state.rules.map((x,i)=>`<div class="item"><div class="itemtop"><b>${esc(x.payee)}</b><span>${yen(x.amount)}</span></div><div class="muted">次回：${x.date}　${freqName(x.freq)}</div><button class="danger" onclick="delRule('${x.id}')" style="margin-top:7px;padding:8px">削除</button></div>`).join(''):'<div class="empty">登録なし</div>';
- $('logs').innerHTML=state.savingLogs.length?state.savingLogs.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.type==='in'?'貯金':'引き出し'}</b><span>${x.type==='in'?'+':'−'}${yen(x.amount)}</span></div><div class="muted">${esc(x.memo)}　${x.date}</div></div>`).join(''):'<div class="empty">履歴なし</div>';
+ $('logs').innerHTML=state.savingLogs.length?state.savingLogs.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.type==='in'?'貯金':'引き出し'}</b><span>${x.type==='in'?'+':'−'}${yen(x.amount)}</span></div><div class="muted">${esc(x.memo)}　${x.date}</div><button class="danger" onclick="undoSaving('${x.id}')" style="margin-top:7px;padding:8px">この履歴を取り消す</button></div>`).join(''):'<div class="empty">履歴なし</div>';
 }
 function freqName(f){return ({once:'1回のみ',monthly:'毎月','2monthly':'2ヶ月ごと',quarterly:'3ヶ月ごと',yearly:'毎年'})[f]}
 async function addSaving(dir){
@@ -148,6 +148,21 @@ async function addRule(){
  if(!payee||!amount||!date)return alert('支払先・金額・次回支払日を入力してね');
  state.rules.push({id:crypto.randomUUID(),payee,amount,date,freq});
  $('rulePayee').value='';$('ruleAmount').value='';$('ruleDate').value='';render();await save();
+}
+async function undoSaving(id){
+  const x=state.savingLogs.find(x=>x.id===id);
+  if(!x)return;
+  const action=x.type==='in'?'貯金':'引き出し';
+  if(!confirm(`${action} ${yen(x.amount)} の履歴を取り消します。\n現在の貯金額も元に戻します。よろしいですか？`))return;
+  if(x.type==='in'){
+    state.balance-=Number(x.amount);
+  }else{
+    state.balance+=Number(x.amount);
+  }
+  state.balance=Math.max(0,state.balance);
+  state.savingLogs=state.savingLogs.filter(x=>x.id!==id);
+  render();
+  await save();
 }
 async function delRule(id){state.rules=state.rules.filter(x=>x.id!==id);render();await save()}
 async function resetAll(){if(confirm('すべてのデータを消去します。よろしいですか？')){state=structuredClone(blank);render();await save()}}
